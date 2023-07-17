@@ -44,11 +44,11 @@ file name = personal.json
 ![image](https://github.com/nebula0225/daily/assets/93500898/ef990cef-936c-4998-9581-0e674dca20d6)
 
 
-If you need two times action fix code and add json data
+If you need two times action, fix code and add json data
 ex)
 ```
 "inven2" : {
-        "id" : "",
-        "pwd" : ""
-    },
+    "id" : "",
+    "pwd" : ""
+},
 ```
