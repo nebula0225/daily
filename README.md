@@ -45,3 +45,4 @@ file name = personal.json
     }
 }
 ```
+![image](https://github.com/nebula0225/daily/assets/93500898/ef990cef-936c-4998-9581-0e674dca20d6)
