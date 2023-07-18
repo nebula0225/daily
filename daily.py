@@ -47,7 +47,7 @@ def open_driver():
     options.add_argument("disable-extensions")
     options.add_argument('--log-level=3')
     options.add_argument('incognito') # 시크릿 모드
-    options.add_argument('headless')
+    # options.add_argument('headless')
 
     chromedriver_autoinstaller.install()
     driver = webdriver.Chrome(chrome_options=options)
