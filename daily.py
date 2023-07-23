@@ -9,6 +9,7 @@ from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
+from webdriver_manager.chrome import ChromeDriverManager
 from fake_useragent import UserAgent
 
 # set logging
@@ -49,8 +50,19 @@ def open_driver():
     options.add_argument('incognito') # 시크릿 모드
     # options.add_argument('headless')
 
-    chromedriver_autoinstaller.install()
-    driver = webdriver.Chrome(chrome_options=options)
+    # check and install chromdriver
+    try:
+        chrome_version = chromedriver_autoinstaller.get_chrome_version()
+        logger.info(f"now chrome version : {chrome_version}")
+        chromedriver_autoinstaller.install()
+        driver = webdriver.Chrome(options=options)
+    # if occurred somthing error start with manual driver
+    # https://chromedriver.chromium.org/downloads
+    except Exception as e:
+        logger.info(f"{e} : start with manual chromedriver")
+        driver_path = r"D:\chromedriver_win32\chromedriver.exe"
+        driver = webdriver.Chrome(executable_path=driver_path, options=options)
+    
     driver.maximize_window()
     driver.get('https://www.naver.com/')
     return driver
@@ -394,8 +406,8 @@ if __name__ == "__main__":
         
     try:
         driver = open_driver()
-    except Exception as e:
-        logger.info(f"{e} - fail open_driver()")
+    except FileNotFoundError as e:
+        logger.info(f"{e} - check path : C:\\Program Files\\Google\\Chrome\\Application")
         exit()
         
     try:
