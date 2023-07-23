@@ -1,15 +1,15 @@
 import time
-import chromedriver_autoinstaller
 import telegram
 import traceback
 import logging
 import datetime
 import common
+import chromedriver_autoinstaller
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
-from webdriver_manager.chrome import ChromeDriverManager
 from fake_useragent import UserAgent
 
 # set logging
@@ -51,17 +51,10 @@ def open_driver():
     # options.add_argument('headless')
 
     # check and install chromdriver
-    try:
-        chrome_version = chromedriver_autoinstaller.get_chrome_version()
-        logger.info(f"now chrome version : {chrome_version}")
-        chromedriver_autoinstaller.install()
-        driver = webdriver.Chrome(options=options)
-    # if occurred somthing error start with manual driver
-    # https://chromedriver.chromium.org/downloads
-    except Exception as e:
-        logger.info(f"{e} : start with manual chromedriver")
-        driver_path = r".\chromedriver.exe"
-        driver = webdriver.Chrome(executable_path=driver_path, options=options)
+    service = Service()
+    chrome_version = chromedriver_autoinstaller.get_chrome_version()
+    logger.info(f"now chrome version : {chrome_version}")
+    driver = webdriver.Chrome(service=service ,options=options)
     
     driver.maximize_window()
     driver.get('https://www.naver.com/')
