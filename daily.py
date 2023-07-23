@@ -60,7 +60,7 @@ def open_driver():
     # https://chromedriver.chromium.org/downloads
     except Exception as e:
         logger.info(f"{e} : start with manual chromedriver")
-        driver_path = r"D:\chromedriver_win32\chromedriver.exe"
+        driver_path = r".\chromedriver.exe"
         driver = webdriver.Chrome(executable_path=driver_path, options=options)
     
     driver.maximize_window()
