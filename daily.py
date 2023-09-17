@@ -51,11 +51,13 @@ def open_driver():
     # options.add_argument('headless')
 
     # check and install chromdriver
-    service = Service()
-    chrome_version = chromedriver_autoinstaller.get_chrome_version()
-    logger.info(f"now chrome version : {chrome_version}")
-    driver = webdriver.Chrome(service=service ,options=options)
+    # service = Service()
+    # chrome_version = chromedriver_autoinstaller.get_chrome_version()
+    # logger.info(f"now chrome version : {chrome_version}")
+    # driver = webdriver.Chrome(service=service ,options=options)
     
+    driver = webdriver.Chrome(chrome_options=options, executable_path="chromedriver.exe")
+    logger.info(f"now chrome version : 수동")
     driver.maximize_window()
     driver.get('https://www.naver.com/')
     return driver
