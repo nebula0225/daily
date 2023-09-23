@@ -295,7 +295,7 @@ def inven(driver, id, pwd):
     # 주사위 굴리기 이벤트
     driver.get(event01)
     print("주사위 굴리기 이벤트 시작")
-    time.sleep(3)
+    time.sleep(5)
     for i in range(9):
         try:
             driver.find_element('xpath', '//*[@id="imarbleBoard"]/div[4]').click() # 버튼 클릭
