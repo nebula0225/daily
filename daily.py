@@ -4,9 +4,7 @@ import traceback
 import logging
 import datetime
 import common
-import chromedriver_autoinstaller
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
@@ -50,14 +48,19 @@ def open_driver():
     options.add_argument('incognito') # 시크릿 모드
     # options.add_argument('headless')
 
-    # check and install chromdriver
-    # service = Service()
+    # 자동
     # chrome_version = chromedriver_autoinstaller.get_chrome_version()
-    # logger.info(f"now chrome version : {chrome_version}")
-    # driver = webdriver.Chrome(service=service ,options=options)
+    driver = webdriver.Chrome(options=options)
     
-    driver = webdriver.Chrome(chrome_options=options, executable_path="chromedriver.exe")
-    logger.info(f"now chrome version : 수동")
+    # 수동
+    # driver = webdriver.Chrome(chrome_options=options, executable_path="chromedriver.exe")
+    # logger.info(f"now chrome version : 수동")
+    
+    # 버전 체크
+    chrome_version = driver.capabilities['browserVersion']
+    print(f"now chrome version : {chrome_version}")
+    logger.info(f"now chrome version : {chrome_version}")
+    
     driver.maximize_window()
     driver.get('https://www.naver.com/')
     return driver
@@ -249,13 +252,13 @@ def inven(driver, id, pwd):
     # 주사위
     event01 = 'https://imart.inven.co.kr/imarble/'
     
-    driver.implicitly_wait(3)                                                                                                                                                                                                                                                                                                                                     
+    driver.implicitly_wait(5)
     driver.maximize_window() #헤드리스 안쓸때
     
     while 1:
         try:
             driver.get(url) #사이트 이동
-            time.sleep(3)
+            time.sleep(5)
             
             id = "'" + id + "'"
             pwd = "'" + pwd + "'"
@@ -271,13 +274,12 @@ def inven(driver, id, pwd):
 
     # 로그인 버튼 클릭
     driver.find_element('xpath', '//*[@id="loginBtn"]').click() # 버튼 클릭
-    time.sleep(3)
     try:
         # 다음에 변경하기
         driver.find_element('xpath', '//*[@id="btn-extend"]').click() # 버튼 클릭
     except:
         pass
-    time.sleep(2)
+    time.sleep(3)
     driver.get(check) #사이트 이동
     time.sleep(3)
     driver.find_element('xpath', '//*[@id="invenAttendCheck"]/div/div[2]/div/div[3]/div[1]/div[4]/a').click() # 버튼 클릭
@@ -405,26 +407,26 @@ if __name__ == "__main__":
         logger.info(f"{e} - check path : C:\\Program Files\\Google\\Chrome\\Application")
         exit()
         
-    try:
-        mode = "ondisk"
-        login_ondisk(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
+    # try:
+    #     mode = "ondisk"
+    #     login_ondisk(driver, account[mode]["id"], account[mode]["pwd"])
+    #     logger.info(f"success {mode}")
+    # except Exception as e:
+    #     logger.info(f"{e} - fail {mode}")
         
-    try:
-        mode = "yesfile"
-        login_yesfile(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
+    # try:
+    #     mode = "yesfile"
+    #     login_yesfile(driver, account[mode]["id"], account[mode]["pwd"])
+    #     logger.info(f"success {mode}")
+    # except Exception as e:
+    #     logger.info(f"{e} - fail {mode}")
         
-    try:
-        mode = "filebogo"
-        login_filebogo(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
+    # try:
+    #     mode = "filebogo"
+    #     login_filebogo(driver, account[mode]["id"], account[mode]["pwd"])
+    #     logger.info(f"success {mode}")
+    # except Exception as e:
+    #     logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "inven"
