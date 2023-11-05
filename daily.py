@@ -36,13 +36,13 @@ def load_telegram():
     return token, chatID
 
 def open_driver():
-    ua = UserAgent(verify_ssl=False)
-    userAgent = ua.random
+    # ua = UserAgent(verify_ssl=False)
+    # userAgent = ua.random
 
     options = webdriver.ChromeOptions()
     options.add_argument('window-size=1920x1080')
     options.add_argument("disable-gpu")
-    options.add_argument(f'user-agent={userAgent}')
+    # options.add_argument(f'user-agent={userAgent}')
     options.add_argument("disable-extensions")
     options.add_argument('--log-level=3')
     options.add_argument('incognito') # 시크릿 모드
