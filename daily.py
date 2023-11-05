@@ -407,26 +407,26 @@ if __name__ == "__main__":
         logger.info(f"{e} - check path : C:\\Program Files\\Google\\Chrome\\Application")
         exit()
         
-    # try:
-    #     mode = "ondisk"
-    #     login_ondisk(driver, account[mode]["id"], account[mode]["pwd"])
-    #     logger.info(f"success {mode}")
-    # except Exception as e:
-    #     logger.info(f"{e} - fail {mode}")
+    try:
+        mode = "ondisk"
+        login_ondisk(driver, account[mode]["id"], account[mode]["pwd"])
+        logger.info(f"success {mode}")
+    except Exception as e:
+        logger.info(f"{e} - fail {mode}")
         
-    # try:
-    #     mode = "yesfile"
-    #     login_yesfile(driver, account[mode]["id"], account[mode]["pwd"])
-    #     logger.info(f"success {mode}")
-    # except Exception as e:
-    #     logger.info(f"{e} - fail {mode}")
+    try:
+        mode = "yesfile"
+        login_yesfile(driver, account[mode]["id"], account[mode]["pwd"])
+        logger.info(f"success {mode}")
+    except Exception as e:
+        logger.info(f"{e} - fail {mode}")
         
-    # try:
-    #     mode = "filebogo"
-    #     login_filebogo(driver, account[mode]["id"], account[mode]["pwd"])
-    #     logger.info(f"success {mode}")
-    # except Exception as e:
-    #     logger.info(f"{e} - fail {mode}")
+    try:
+        mode = "filebogo"
+        login_filebogo(driver, account[mode]["id"], account[mode]["pwd"])
+        logger.info(f"success {mode}")
+    except Exception as e:
+        logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "inven"
