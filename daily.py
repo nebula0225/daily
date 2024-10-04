@@ -448,6 +448,13 @@ if __name__ == "__main__":
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
+        
+    try:
+        mode = "item_mania2"
+        item_mania(driver, account[mode]["id"], account[mode]["pwd"])
+        logger.info(f"success {mode}")
+    except Exception as e:
+        logger.info(f"{e} - fail {mode}")
     
     driver.quit()
     bot.sendMessage(chat_id = chatID, text=f'daily end')
