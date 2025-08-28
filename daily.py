@@ -340,7 +340,7 @@ def inven(driver, id, pwd):
 def item_mania(driver, id, pwd):
     
     login = 'https://www.itemmania.com/portal/user/p_login_form.html'
-    event = 'http://www.itemmania.com/event/event_ing/e190417_attend/'
+    event = 'https://trade.itemmania.com/event/event_ing/e190417_attend/'
                                                                                                                                                                                                                                                                                                                                   
     driver.implicitly_wait(10)
     
