@@ -354,7 +354,7 @@ def item_mania(driver, id, pwd):
             login = driver.find_element('id', 'user_password')
             login.send_keys(pwd)
             time.sleep(1)
-            driver.find_element('xpath', '/html/body/div[2]/div[4]/div[2]/div[2]/form[1]/ul/li[3]/button').click()
+            driver.find_element('xpath', '/html/body/div[2]/main/div[2]/div[2]/form[1]/ul/li[3]/button').click()
             time.sleep(5)
             break
         except Exception as e:
@@ -372,18 +372,19 @@ def item_mania(driver, id, pwd):
     time.sleep(2)
     
     # 출석 버튼 누르기
-    driver.find_element('xpath', '/html/body/div[2]/div[2]/div/div[3]/div/div[3]').click()
+    dailyCheckBtn = '/html/body/div[2]/main/div/div[3]/div/div[3]'
+    driver.find_element('xpath', dailyCheckBtn).click()
     
     # 출석 됐는지 체크
     time.sleep(3)
     check = ""
     try:
-        check = driver.find_element('xpath', '/html/body/div[2]/div[2]/div/div[3]/div/div[3]').text
+        check = driver.find_element('xpath', dailyCheckBtn).text
     except:
         bot.sendMessage(chat_id = chatID, text=f'아이템매니아 결과 파싱 실패 - 한번 더 시도')
         driver.refresh()
         time.sleep(3)
-        check = driver.find_element('xpath', '/html/body/div[2]/div[2]/div/div[3]/div/div[3]').text
+        check = driver.find_element('xpath', dailyCheckBtn).text
         
     logger.info({check})
     bot.sendMessage(chat_id = chatID, text=f'{check}')
