@@ -3,6 +3,7 @@ import telegram
 import traceback
 import logging
 import datetime
+import asyncio
 import common
 from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
@@ -34,6 +35,21 @@ def load_telegram():
     token = result["token"]
     chatID = result["chatID"]
     return token, chatID
+
+# load_telegram()의 반환값을 전역 변수로 할당
+TOKEN, CHAT_ID = load_telegram()
+BOT = telegram.Bot(TOKEN)
+
+def send_telegram_message(text: str):
+    """텔레그램 메시지 전송 헬퍼 함수
+
+    Args:
+        text (str): 전송할 메시지 내용
+    """
+    try:
+        asyncio.run(BOT.send_message(chat_id = CHAT_ID, text=text))
+    except Exception as e:
+        print("메시지 전송 실패:", e)
 
 def open_driver():
     # ua = UserAgent(verify_ssl=False)
@@ -147,7 +163,7 @@ def login_filenori(driver, id, pwd):
             pass
     except Exception as e:
         print(e)
-        bot.sendMessage(chat_id = chatID, text=f'파일노리 실패 : {e}')
+        send_telegram_message(f'파일노리 실패 : {e}')
         return
     
     print("2 - 파일노리 출석 체크 완료")
@@ -331,7 +347,7 @@ def inven(driver, id, pwd):
     info2 = driver.find_element('xpath', '/html/body/div[1]/div[4]/div[1]/div[5]/div[2]').text
     print(info1)
     print(info2)
-    bot.sendMessage(chat_id = chatID, text=f'{id} / {info1} / {info2}')
+    send_telegram_message(f'{id} / {info1} / {info2}')
     
     print("5 - 인벤 출석 체크 완료")
     
@@ -381,13 +397,13 @@ def item_mania(driver, id, pwd):
     try:
         check = driver.find_element('xpath', dailyCheckBtn).text
     except:
-        bot.sendMessage(chat_id = chatID, text=f'아이템매니아 결과 파싱 실패 - 한번 더 시도')
+        send_telegram_message('아이템매니아 결과 파싱 실패 - 한번 더 시도')
         driver.refresh()
         time.sleep(3)
         check = driver.find_element('xpath', dailyCheckBtn).text
         
     logger.info({check})
-    bot.sendMessage(chat_id = chatID, text=f'{check}')
+    send_telegram_message(f'아이템매니아 결과: {check}')
     return
 
 
@@ -395,12 +411,7 @@ if __name__ == "__main__":
     
     account = common.open_json(".//", "personal.json")
     
-    try:
-        token, chatID = load_telegram()
-        bot = telegram.Bot(token)
-        bot.sendMessage(chat_id = chatID, text=f'daily start')
-    except Exception as e:
-        logger.info(f"{e} - fail to load telegram")
+    send_telegram_message('daily start')
         
     try:
         driver = open_driver()
@@ -458,4 +469,4 @@ if __name__ == "__main__":
         logger.info(f"{e} - fail {mode}")
     
     driver.quit()
-    bot.sendMessage(chat_id = chatID, text=f'daily end')
+    send_telegram_message('daily end')
