@@ -40,14 +40,14 @@ def load_telegram():
 TOKEN, CHAT_ID = load_telegram()
 BOT = telegram.Bot(TOKEN)
 
-def send_telegram_message(text: str):
+async def send_telegram_message(text: str):
     """텔레그램 메시지 전송 헬퍼 함수
 
     Args:
         text (str): 전송할 메시지 내용
     """
     try:
-        asyncio.run(BOT.send_message(chat_id = CHAT_ID, text=text))
+        await BOT.send_message(chat_id = CHAT_ID, text=text)
     except Exception as e:
         print("메시지 전송 실패:", e)
 
@@ -81,7 +81,7 @@ def open_driver():
     driver.get('https://www.naver.com/')
     return driver
 
-def login_ondisk(driver, id, pwd):
+async def login_ondisk(driver, id, pwd):
     
     ondisk = 'https://ondisk.co.kr/index.php?mode=eventMarge&sm=event&action=view&idx=746&event_page=1'
     roulette = 'https://ondisk.co.kr/event/20140409_attend/event.php?mode=eventMarge&sm=event&action=view&idx=746&event_page=1'
@@ -125,7 +125,7 @@ def login_ondisk(driver, id, pwd):
     time.sleep(2)
     return
 
-def login_filenori(driver, id, pwd):
+async def login_filenori(driver, id, pwd):
     # 수정중
     site = 'https://m.filenori.com/'
     login_site = 'https://www.filenori.com/common/html/member/loginForm.html?20211001/?conn=filenori' # url 통해서 로그인시 포인트 지급
@@ -163,13 +163,13 @@ def login_filenori(driver, id, pwd):
             pass
     except Exception as e:
         print(e)
-        send_telegram_message(f'파일노리 실패 : {e}')
+        await send_telegram_message(f'파일노리 실패 : {e}')
         return
     
     print("2 - 파일노리 출석 체크 완료")
     return
     
-def login_yesfile(driver, id, pwd):
+async def login_yesfile(driver, id, pwd):
     site = 'https://www.yesfile.com/'
     roulette = 'https://www.yesfile.com/event/#tab=view&id=attendroulette'
 
@@ -209,7 +209,7 @@ def login_yesfile(driver, id, pwd):
             continue
     return
 
-def login_filebogo(driver, id, pwd):
+async def login_filebogo(driver, id, pwd):
     site = 'https://www.filebogo.com/'
     check = 'https://www.filebogo.com/main/event.php?doc=filebogo_attend&eventIdx=6'
 
@@ -257,7 +257,7 @@ def login_filebogo(driver, id, pwd):
     time.sleep(2)
     return
 
-def inven(driver, id, pwd):
+async def inven(driver, id, pwd):
     
     #로그인
     url = 'https://member.inven.co.kr/user/scorpio/mlogin'
@@ -347,13 +347,13 @@ def inven(driver, id, pwd):
     info2 = driver.find_element('xpath', '/html/body/div[1]/div[4]/div[1]/div[5]/div[2]').text
     print(info1)
     print(info2)
-    send_telegram_message(f'{id} / {info1} / {info2}')
+    await send_telegram_message(f'{id} / {info1} / {info2}')
     
     print("5 - 인벤 출석 체크 완료")
     
     return
 
-def item_mania(driver, id, pwd):
+async def item_mania(driver, id, pwd):
     
     login = 'https://www.itemmania.com/portal/user/p_login_form.html'
     event = 'https://trade.itemmania.com/event/event_ing/e190417_attend/'
@@ -370,7 +370,7 @@ def item_mania(driver, id, pwd):
             login = driver.find_element('id', 'user_password')
             login.send_keys(pwd)
             time.sleep(1)
-            driver.find_element('xpath', '/html/body/div[2]/main/div[2]/div[2]/form[1]/ul/li[3]/button').click()
+            driver.find_element('xpath', '/html/body/div[2]/main/div[2]/div[2]/form[1]/ul/li[4]/button').click()
             time.sleep(5)
             break
         except Exception as e:
@@ -397,21 +397,19 @@ def item_mania(driver, id, pwd):
     try:
         check = driver.find_element('xpath', dailyCheckBtn).text
     except:
-        send_telegram_message('아이템매니아 결과 파싱 실패 - 한번 더 시도')
+        await send_telegram_message('아이템매니아 결과 파싱 실패 - 한번 더 시도')
         driver.refresh()
         time.sleep(3)
         check = driver.find_element('xpath', dailyCheckBtn).text
         
     logger.info({check})
-    send_telegram_message(f'아이템매니아 결과: {check}')
+    await send_telegram_message(f'아이템매니아 결과: {check}')
     return
 
-
-if __name__ == "__main__":
-    
+async def main():
     account = common.open_json(".//", "personal.json")
     
-    send_telegram_message('daily start')
+    await send_telegram_message('daily start')
         
     try:
         driver = open_driver()
@@ -421,52 +419,56 @@ if __name__ == "__main__":
         
     try:
         mode = "ondisk"
-        login_ondisk(driver, account[mode]["id"], account[mode]["pwd"])
+        await login_ondisk(driver, account[mode]["id"], account[mode]["pwd"])
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "yesfile"
-        login_yesfile(driver, account[mode]["id"], account[mode]["pwd"])
+        await login_yesfile(driver, account[mode]["id"], account[mode]["pwd"])
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "filebogo"
-        login_filebogo(driver, account[mode]["id"], account[mode]["pwd"])
+        await login_filebogo(driver, account[mode]["id"], account[mode]["pwd"])
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "inven"
-        inven(driver, account[mode]["id"], account[mode]["pwd"])
+        await inven(driver, account[mode]["id"], account[mode]["pwd"])
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "inven2"
-        inven(driver, account[mode]["id"], account[mode]["pwd"])
+        await inven(driver, account[mode]["id"], account[mode]["pwd"])
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "item_mania"
-        item_mania(driver, account[mode]["id"], account[mode]["pwd"])
+        await item_mania(driver, account[mode]["id"], account[mode]["pwd"])
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
         
     try:
         mode = "item_mania2"
-        item_mania(driver, account[mode]["id"], account[mode]["pwd"])
+        await item_mania(driver, account[mode]["id"], account[mode]["pwd"])
         logger.info(f"success {mode}")
     except Exception as e:
         logger.info(f"{e} - fail {mode}")
     
     driver.quit()
-    send_telegram_message('daily end')
+    await send_telegram_message('daily end')
+
+if __name__ == "__main__":
+    asyncio.run(main())
+    
