@@ -2,3 +2,4 @@ personal.json
 telegram.json
 *.pyc
 *.txt
+.DS_Store
