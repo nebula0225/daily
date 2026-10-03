@@ -1,6 +1,11 @@
 # daily
 Check attendance of various web
 
+Install dependencies (python-telegram-bot 22 needs Python 3.10+)
+```
+pip install -U -r requirements.txt
+```
+
 You need two json files
 
 

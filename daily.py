@@ -1,4 +1,6 @@
+import re
 import time
+import html
 import telegram
 import traceback
 import logging
@@ -9,6 +11,7 @@ from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
+from telegram.constants import MessageLimit, ParseMode
 from fake_useragent import UserAgent
 
 # set logging
@@ -38,18 +41,73 @@ def load_telegram():
 
 # load_telegram()의 반환값을 전역 변수로 할당
 TOKEN, CHAT_ID = load_telegram()
-BOT = telegram.Bot(TOKEN)
 
-async def send_telegram_message(text: str):
-    """텔레그램 메시지 전송 헬퍼 함수
+DETAIL_LIMIT = 200
 
-    Args:
-        text (str): 전송할 메시지 내용
-    """
+def clean(text):
+    """Collapse whitespace and cap length so one site cannot flood the report."""
+    return " ".join(str(text).split())[:DETAIL_LIMIT]
+
+def describe_error(e):
+    # selenium appends a long native stacktrace after the first line
+    lines = str(e).strip().splitlines()
+    first = lines[0].removeprefix("Message: ").strip() if lines else ""
+    return clean(f"{type(e).__name__}: {first}" if first else type(e).__name__)
+
+def format_duration(seconds):
+    minutes, seconds = divmod(int(seconds), 60)
+    return f"{minutes}m{seconds:02d}s" if minutes else f"{seconds}s"
+
+def build_report(started_at, total_seconds, results, fatal=""):
+    """Build the HTML summary message from the per-site results."""
+    failed = sum(not r["ok"] for r in results)
+    minutes, seconds = divmod(int(total_seconds), 60)
+    head = [
+        f"daily {started_at:%Y-%m-%d %H:%M} (총 {minutes}분 {seconds}초)",
+        f"성공 {len(results) - failed} / 실패 {failed}",
+    ]
+    if fatal:
+        head.append(f"중단: {fatal}")
+
+    width = max((len(r["mode"]) for r in results), default=0)
+    rows = []
+    for r in results:
+        rows.append(f"{'OK  ' if r['ok'] else 'FAIL'} {r['mode']:<{width}}  {format_duration(r['seconds'])}")
+        if r["detail"]:
+            rows.append(f"     {r['detail']}")
+
+    text = html.escape("\n".join(head))
+    if rows:
+        # <pre> keeps the columns aligned; plain telegram text is proportional
+        text += "\n<pre>" + html.escape("\n".join(rows)) + "</pre>"
+    return text
+
+async def send_report(started_at, total_seconds, results, fatal=""):
+    """Send failure screenshots silently, then the summary. Never raises."""
     try:
-        await BOT.send_message(chat_id = CHAT_ID, text=text)
+        async with telegram.Bot(TOKEN) as bot:
+            for r in results:
+                if not r["screenshot"]:
+                    continue
+                try:
+                    await bot.send_photo(
+                        chat_id=CHAT_ID,
+                        photo=r["screenshot"],
+                        caption=f"FAIL {r['mode']}\n{r['detail']}",
+                        disable_notification=True,
+                    )
+                except Exception as e:
+                    logger.error(f"telegram photo failed ({r['mode']}): {e}")
+            text = build_report(started_at, total_seconds, results, fatal)
+            try:
+                await bot.send_message(chat_id=CHAT_ID, text=text, parse_mode=ParseMode.HTML)
+            except Exception as e:
+                # the summary is the only message of the run, so fall back to plain text
+                logger.error(f"telegram html report failed, retrying as plain text: {e}")
+                plain = html.unescape(re.sub(r"</?pre>", "", text))
+                await bot.send_message(chat_id=CHAT_ID, text=plain[:MessageLimit.MAX_TEXT_LENGTH])
     except Exception as e:
-        print("메시지 전송 실패:", e)
+        logger.error(f"telegram report failed: {e}")
 
 def open_driver():
     # ua = UserAgent(verify_ssl=False)
@@ -115,15 +173,17 @@ async def login_ondisk(driver, id, pwd):
         time.sleep(2)
         
         # if already done
+        detail = ""
         try:
             alert = Alert(driver)
+            detail = alert.text
             alert.dismiss()
         except:
             pass
         break
-    
+
     time.sleep(2)
-    return
+    return detail
 
 async def login_filenori(driver, id, pwd):
     # 수정중
@@ -163,9 +223,8 @@ async def login_filenori(driver, id, pwd):
             pass
     except Exception as e:
         print(e)
-        await send_telegram_message(f'파일노리 실패 : {e}')
-        return
-    
+        raise
+
     print("2 - 파일노리 출석 체크 완료")
     return
     
@@ -203,11 +262,12 @@ async def login_yesfile(driver, id, pwd):
     while 1:
         try:
             alert = Alert(driver)
+            detail = alert.text
             alert.dismiss()
             break
         except:
             continue
-    return
+    return detail
 
 async def login_filebogo(driver, id, pwd):
     site = 'https://www.filebogo.com/'
@@ -250,12 +310,13 @@ async def login_filebogo(driver, id, pwd):
     while 1:
         try:
             alert = Alert(driver)
+            detail = alert.text
             alert.dismiss()
             break
         except:
             continue
     time.sleep(2)
-    return
+    return detail
 
 async def inven(driver, id, pwd):
     
@@ -347,11 +408,9 @@ async def inven(driver, id, pwd):
     info2 = driver.find_element('xpath', '/html/body/div[1]/div[4]/div[1]/div[5]/div[2]').text
     print(info1)
     print(info2)
-    await send_telegram_message(f'{id} / {info1} / {info2}')
-    
     print("5 - 인벤 출석 체크 완료")
-    
-    return
+
+    return f'{info1} / {info2}'
 
 async def item_mania(driver, id, pwd):
     
@@ -403,77 +462,81 @@ async def item_mania(driver, id, pwd):
     try:
         check = driver.find_element('xpath', dailyCheckBtn).text
     except:
-        await send_telegram_message('아이템매니아 결과 파싱 실패 - 한번 더 시도')
+        logger.info('아이템매니아 결과 파싱 실패 - 한번 더 시도')
         driver.refresh()
         time.sleep(3)
         check = driver.find_element('xpath', dailyCheckBtn).text
-        
-    logger.info({check})
-    await send_telegram_message(f'아이템매니아 결과: {check}')
-    return
+
+    logger.info(check)
+    return check
+
+# (personal.json key, site function) in run order
+SITES = [
+    ("ondisk", login_ondisk),
+    ("yesfile", login_yesfile),
+    ("filebogo", login_filebogo),
+    ("inven", inven),
+    ("inven2", inven),
+    ("item_mania", item_mania),
+    ("item_mania2", item_mania),
+]
+
+def take_screenshot(driver):
+    """PNG bytes of the current page, or None if the browser cannot provide one."""
+    # an open alert blocks screenshots
+    try:
+        Alert(driver).dismiss()
+    except Exception:
+        pass
+    try:
+        return driver.get_screenshot_as_png()
+    except Exception:
+        return None
+
+async def run_site(driver, mode, func, account):
+    """Run one site and return its result; OK only means the flow finished without an exception."""
+    result = {"mode": mode, "ok": False, "detail": "", "seconds": 0, "screenshot": None}
+    started = time.monotonic()
+    try:
+        detail = await func(driver, account[mode]["id"], account[mode]["pwd"])
+        result["ok"] = True
+        result["detail"] = clean(detail or "")
+        logger.info(f"success {mode}")
+    except Exception as e:
+        result["detail"] = describe_error(e)
+        # capture before the next site navigates away
+        result["screenshot"] = take_screenshot(driver)
+        logger.info(f"{e} - fail {mode}")
+    result["seconds"] = time.monotonic() - started
+    return result
 
 async def main():
-    account = common.open_json(".//", "personal.json")
-    
-    await send_telegram_message('daily start')
-        
+    started_at = datetime.datetime.now()
+    started = time.monotonic()
+    results = []
+    fatal = ""
+    driver = None
+
     try:
-        driver = open_driver()
-    except FileNotFoundError as e:
-        logger.info(f"{e} - check path : C:\\Program Files\\Google\\Chrome\\Application")
-        exit()
-        
-    try:
-        mode = "ondisk"
-        await login_ondisk(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
+        account = common.open_json(".//", "personal.json")
+        try:
+            driver = open_driver()
+        except FileNotFoundError as e:
+            logger.info(f"{e} - check path : C:\\Program Files\\Google\\Chrome\\Application")
+            raise
+
+        for mode, func in SITES:
+            results.append(await run_site(driver, mode, func, account))
     except Exception as e:
-        logger.info(f"{e} - fail {mode}")
-        
-    try:
-        mode = "yesfile"
-        await login_yesfile(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
-        
-    try:
-        mode = "filebogo"
-        await login_filebogo(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
-        
-    try:
-        mode = "inven"
-        await inven(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
-        
-    try:
-        mode = "inven2"
-        await inven(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
-        
-    try:
-        mode = "item_mania"
-        await item_mania(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
-        
-    try:
-        mode = "item_mania2"
-        await item_mania(driver, account[mode]["id"], account[mode]["pwd"])
-        logger.info(f"success {mode}")
-    except Exception as e:
-        logger.info(f"{e} - fail {mode}")
-    
-    driver.quit()
-    await send_telegram_message('daily end')
+        fatal = describe_error(e)
+        logger.error(traceback.format_exc())
+    finally:
+        if driver is not None:
+            try:
+                driver.quit()
+            except Exception as e:
+                logger.info(f"{e} - fail driver.quit")
+        await send_report(started_at, time.monotonic() - started, results, fatal)
 
 if __name__ == "__main__":
     asyncio.run(main())
