@@ -11,7 +11,10 @@ import common
 from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import NoAlertPresentException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.alert import Alert
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from telegram.constants import MessageLimit, ParseMode
 
 # set logging
@@ -117,6 +120,26 @@ async def send_report(started_at, total_seconds, results, fatal=""):
 # retries after the first attempt; the last failure is raised so the site is reported as failed
 MAX_RETRIES = 3
 
+# seconds to wait for a site's result alert
+ALERT_TIMEOUT = 10
+
+def read_alert(driver, timeout=None):
+    """Wait for an alert, close it and return its text; None if none shows up in time."""
+    try:
+        alert = WebDriverWait(driver, ALERT_TIMEOUT if timeout is None else timeout).until(EC.alert_is_present())
+    except TimeoutException:
+        return None
+    text = alert.text
+    alert.dismiss()
+    return text
+
+def expect_alert(driver):
+    """Like read_alert, but a missing alert is an error."""
+    text = read_alert(driver)
+    if text is None:
+        raise NoAlertPresentException("no result alert appeared")
+    return text
+
 def open_driver():
     options = webdriver.ChromeOptions()
     options.add_argument('window-size=1920x1080')
@@ -148,41 +171,29 @@ async def login_ondisk(driver, id, pwd):
     
     driver.implicitly_wait(10)
     
-    while 1:
-        driver.get(ondisk) 
-        time.sleep(5)
-        login = driver.find_element('name', 'mb_id')
-        login.send_keys(id)
-        time.sleep(2)
-        login = driver.find_element('name', 'mb_pw')
-        login.send_keys(pwd)
-        time.sleep(1)
-        driver.find_element('xpath', '//*[@id="page-login"]/form/fieldset/div/p[3]').click()
-        time.sleep(3)
-        
-        # alert창 꺼야함
-        try:
-            alert = Alert(driver)
-            alert.dismiss()
-        except:
-            pass
-        
-        # 출석 룰렛 돌리기
-        time.sleep(3)
-        driver.get(roulette)
-        time.sleep(5)
-        driver.find_element('xpath', '//*[@id="js-roulette"]/p/button').click() # 룰렛 버튼 클릭
-        time.sleep(2)
-        
-        # if already done
-        detail = ""
-        try:
-            alert = Alert(driver)
-            detail = alert.text
-            alert.dismiss()
-        except:
-            pass
-        break
+    driver.get(ondisk) 
+    time.sleep(5)
+    login = driver.find_element('name', 'mb_id')
+    login.send_keys(id)
+    time.sleep(2)
+    login = driver.find_element('name', 'mb_pw')
+    login.send_keys(pwd)
+    time.sleep(1)
+    driver.find_element('xpath', '//*[@id="page-login"]/form/fieldset/div/p[3]').click()
+    time.sleep(3)
+    
+    # alert창 꺼야함
+    read_alert(driver, 1)
+    
+    # 출석 룰렛 돌리기
+    time.sleep(3)
+    driver.get(roulette)
+    time.sleep(5)
+    driver.find_element('xpath', '//*[@id="js-roulette"]/p/button').click() # 룰렛 버튼 클릭
+    time.sleep(2)
+    
+    # if already done
+    detail = read_alert(driver, 1) or ""
 
     time.sleep(2)
     return detail
@@ -263,18 +274,7 @@ async def login_yesfile(driver, id, pwd):
                 raise
             continue
     
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            alert = Alert(driver)
-            detail = alert.text
-            alert.dismiss()
-            break
-        except Exception:
-            if attempt == MAX_RETRIES:
-                raise
-            # give the alert time to appear before the next attempt
-            time.sleep(2)
-            continue
+    detail = expect_alert(driver)
     return detail
 
 async def login_filebogo(driver, id, pwd):
@@ -317,18 +317,7 @@ async def login_filebogo(driver, id, pwd):
     
     time.sleep(3)
         
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            alert = Alert(driver)
-            detail = alert.text
-            alert.dismiss()
-            break
-        except Exception:
-            if attempt == MAX_RETRIES:
-                raise
-            # give the alert time to appear before the next attempt
-            time.sleep(2)
-            continue
+    detail = expect_alert(driver)
     time.sleep(2)
     return detail
 
