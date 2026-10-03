@@ -61,11 +61,14 @@ def format_duration(seconds):
 
 def build_report(started_at, total_seconds, results, fatal=""):
     """Build the HTML summary message from the per-site results."""
-    failed = sum(not r["ok"] for r in results)
+    counts = {s: sum(r["status"] == s for r in results) for s in ("OK", "FAIL", "SKIP")}
+    summary = f"성공 {counts['OK']} / 실패 {counts['FAIL']}"
+    if counts["SKIP"]:
+        summary += f" / 건너뜀 {counts['SKIP']}"
     minutes, seconds = divmod(int(total_seconds), 60)
     head = [
         f"daily {started_at:%Y-%m-%d %H:%M} (총 {minutes}분 {seconds}초)",
-        f"성공 {len(results) - failed} / 실패 {failed}",
+        summary,
     ]
     if fatal:
         head.append(f"중단: {fatal}")
@@ -73,7 +76,8 @@ def build_report(started_at, total_seconds, results, fatal=""):
     width = max((len(r["mode"]) for r in results), default=0)
     rows = []
     for r in results:
-        rows.append(f"{'OK  ' if r['ok'] else 'FAIL'} {r['mode']:<{width}}  {format_duration(r['seconds'])}")
+        duration = "" if r["status"] == "SKIP" else format_duration(r["seconds"])
+        rows.append(f"{r['status']:<4} {r['mode']:<{width}}  {duration}".rstrip())
         if r["detail"]:
             rows.append(f"     {r['detail']}")
 
@@ -135,7 +139,6 @@ def open_driver():
     logger.info(f"now chrome version : {chrome_version}")
     
     driver.maximize_window()
-    driver.get('https://www.naver.com/')
     return driver
 
 async def login_ondisk(driver, id, pwd):
@@ -504,20 +507,39 @@ def take_screenshot(driver):
     except Exception:
         return None
 
-async def run_site(driver, mode, func, account):
-    """Run one site and return its result; OK only means the flow finished without an exception."""
-    result = {"mode": mode, "ok": False, "detail": "", "seconds": 0, "screenshot": None}
+async def run_site(mode, func, account):
+    """Run one site in its own browser and return its result.
+
+    OK only means the flow finished without an exception.
+    """
+    result = {"mode": mode, "status": "FAIL", "detail": "", "seconds": 0, "screenshot": None}
+    if mode not in account:
+        result.update(status="SKIP", detail="personal.json에 계정 없음")
+        logger.info(f"skip {mode}")
+        return result
+
     started = time.monotonic()
+    driver = None
     try:
+        # a fresh browser per site keeps one account's session out of the next one
+        driver = open_driver()
         detail = await func(driver, account[mode]["id"], account[mode]["pwd"])
-        result["ok"] = True
+        result["status"] = "OK"
         result["detail"] = clean(detail or "")
         logger.info(f"success {mode}")
     except Exception as e:
         result["detail"] = describe_error(e)
-        # capture before the next site navigates away
-        result["screenshot"] = take_screenshot(driver)
+        if driver is None:
+            logger.info("browser did not open - check path : C:\\Program Files\\Google\\Chrome\\Application")
+        else:
+            result["screenshot"] = take_screenshot(driver)
         logger.info(f"{e} - fail {mode}")
+    finally:
+        if driver is not None:
+            try:
+                driver.quit()
+            except Exception as e:
+                logger.info(f"{e} - fail driver.quit")
     result["seconds"] = time.monotonic() - started
     return result
 
@@ -526,27 +548,15 @@ async def main():
     started = time.monotonic()
     results = []
     fatal = ""
-    driver = None
 
     try:
         account = common.open_json(".//", "personal.json")
-        try:
-            driver = open_driver()
-        except FileNotFoundError as e:
-            logger.info(f"{e} - check path : C:\\Program Files\\Google\\Chrome\\Application")
-            raise
-
         for mode, func in SITES:
-            results.append(await run_site(driver, mode, func, account))
+            results.append(await run_site(mode, func, account))
     except Exception as e:
         fatal = describe_error(e)
         logger.error(traceback.format_exc())
     finally:
-        if driver is not None:
-            try:
-                driver.quit()
-            except Exception as e:
-                logger.info(f"{e} - fail driver.quit")
         await send_report(started_at, time.monotonic() - started, results, fatal)
 
 if __name__ == "__main__":
