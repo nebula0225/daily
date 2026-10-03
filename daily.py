@@ -132,7 +132,6 @@ def open_driver():
     
     # 버전 체크
     chrome_version = driver.capabilities['browserVersion']
-    print(f"now chrome version : {chrome_version}")
     logger.info(f"now chrome version : {chrome_version}")
     
     driver.maximize_window()
@@ -222,10 +221,10 @@ async def login_filenori(driver, id, pwd):
         except:
             pass
     except Exception as e:
-        print(e)
+        logger.info(e)
         raise
 
-    print("2 - 파일노리 출석 체크 완료")
+    logger.info("2 - 파일노리 출석 체크 완료")
     return
     
 async def login_yesfile(driver, id, pwd):
@@ -385,7 +384,7 @@ async def inven(driver, id, pwd):
     
     # 주사위 굴리기 이벤트
     driver.get(event01)
-    print("주사위 굴리기 이벤트 시작")
+    logger.info("주사위 굴리기 이벤트 시작")
     time.sleep(5)
     for i in range(9):
         try:
@@ -412,15 +411,13 @@ async def inven(driver, id, pwd):
             driver.refresh()
             pass
         except Exception as e:
-            print(traceback.format_exc())
+            logger.info(f"inven dice {i + 1}: {describe_error(e)}")
             pass
     
     # 결과 확인
     info1 = driver.find_element('xpath', '/html/body/div[1]/div[4]/div[1]/div[5]/div[1]').text
     info2 = driver.find_element('xpath', '/html/body/div[1]/div[4]/div[1]/div[5]/div[2]').text
-    print(info1)
-    print(info2)
-    print("5 - 인벤 출석 체크 완료")
+    logger.info(f"5 - 인벤 출석 체크 완료: {info1} / {info2}")
 
     return f'{info1} / {info2}'
 
