@@ -356,10 +356,16 @@ async def inven(driver, id, pwd):
 async def item_mania(driver, id, pwd):
     
     login = 'https://www.itemmania.com/portal/user/p_login_form.html'
-    event = 'https://trade.itemmania.com/event/event_ing/e190417_attend/'
+    event = 'https://www.itemmania.com/event/event_ing/e190417_attend/'
+    # URL the site's "add to favorites" button saves; sets the counterIDX=dot_bookmark_com cookie
+    bookmark = 'https://www.itemmania.com/counter/survey.php?imcounter=dot_bookmark_com&returnUrl=https%3A%2F%2Fwww.itemmania.com'
                                                                                                                                                                                                                                                                                                                                   
     driver.implicitly_wait(10)
-    
+
+    # must run before login so the session counts as a favorites visit
+    driver.get(bookmark)
+    time.sleep(3)
+
     while 1:
         try:
             driver.get(login)
