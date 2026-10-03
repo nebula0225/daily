@@ -1,3 +1,4 @@
+import os
 import re
 import time
 import html
@@ -12,7 +13,6 @@ from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
 from telegram.constants import MessageLimit, ParseMode
-from fake_useragent import UserAgent
 
 # set logging
 logger = logging.getLogger("daily")
@@ -26,6 +26,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 # file
+os.makedirs("log", exist_ok=True)
 log_filename = datetime.datetime.now().strftime("%Y%m%d.txt")
 file_handler = logging.FileHandler(f".//log//{log_filename}", encoding="UTF-8")
 file_handler.setFormatter(formatter)
@@ -35,9 +36,9 @@ logger.addHandler(file_handler)
 def load_telegram():
     common.check_dir(".//", "telegram.json")
     result = common.open_json(".//", "telegram.json")
-    token = result["token"]
-    chatID = result["chatID"]
-    return token, chatID
+    if not result.get("token") or not result.get("chatID"):
+        raise SystemExit('telegram.json에 "token"과 "chatID"를 채워주세요. (README 참고)')
+    return result["token"], result["chatID"]
 
 # load_telegram()의 반환값을 전역 변수로 할당
 TOKEN, CHAT_ID = load_telegram()
@@ -113,13 +114,9 @@ async def send_report(started_at, total_seconds, results, fatal=""):
 MAX_RETRIES = 3
 
 def open_driver():
-    # ua = UserAgent(verify_ssl=False)
-    # userAgent = ua.random
-
     options = webdriver.ChromeOptions()
     options.add_argument('window-size=1920x1080')
     options.add_argument("disable-gpu")
-    # options.add_argument(f'user-agent={userAgent}')
     options.add_argument("disable-extensions")
     options.add_argument('--log-level=3')
     options.add_argument('incognito') # 시크릿 모드

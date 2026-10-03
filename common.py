@@ -34,5 +34,5 @@ def write_json(locate, file_name, dic):
     file_path = os.path.join(locate, file_name)
     with open(file_path, 'w', encoding="UTF-8") as f:
         f.writelines(json.dumps(dic, indent=4, default=str, ensure_ascii=False))
-    print(f'write_json() : {file_name} / len : {len(list)}')
+    print(f'write_json() : {file_name} / len : {len(dic)}')
     return
