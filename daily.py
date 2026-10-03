@@ -352,12 +352,10 @@ async def inven(driver, id, pwd):
             driver.get(url) #사이트 이동
             time.sleep(5)
             
-            id = "'" + id + "'"
-            pwd = "'" + pwd + "'"
-
-            driver.execute_script("document.getElementsByName('user_id')[0].value=" + id)
+            # pass values as script arguments so quotes in them cannot break the script
+            driver.execute_script("document.getElementsByName('user_id')[0].value=arguments[0]", id)
             time.sleep(1)
-            driver.execute_script("document.getElementsByName('password')[0].value=" + pwd)
+            driver.execute_script("document.getElementsByName('password')[0].value=arguments[0]", pwd)
             time.sleep(1)
             break
             
@@ -431,7 +429,7 @@ async def inven(driver, id, pwd):
 
 async def item_mania(driver, id, pwd):
     
-    login = 'https://www.itemmania.com/portal/user/p_login_form.html'
+    login_url = 'https://www.itemmania.com/portal/user/p_login_form.html'
     event = 'https://www.itemmania.com/event/event_ing/e190417_attend/'
     # URL the site's "add to favorites" button saves; sets the counterIDX=dot_bookmark_com cookie
     bookmark = 'https://www.itemmania.com/counter/survey.php?imcounter=dot_bookmark_com&returnUrl=https%3A%2F%2Fwww.itemmania.com'
@@ -444,7 +442,7 @@ async def item_mania(driver, id, pwd):
 
     for attempt in range(MAX_RETRIES + 1):
         try:
-            driver.get(login)
+            driver.get(login_url)
             time.sleep(5)
             login = driver.find_element('id', 'user_id')
             login.send_keys(id)
