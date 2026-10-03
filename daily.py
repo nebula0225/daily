@@ -109,6 +109,9 @@ async def send_report(started_at, total_seconds, results, fatal=""):
     except Exception as e:
         logger.error(f"telegram report failed: {e}")
 
+# retries after the first attempt; the last failure is raised so the site is reported as failed
+MAX_RETRIES = 3
+
 def open_driver():
     # ua = UserAgent(verify_ssl=False)
     # userAgent = ua.random
@@ -249,23 +252,29 @@ async def login_yesfile(driver, id, pwd):
     time.sleep(5)
     
     # 출석 체크
-    while 1:
+    for attempt in range(MAX_RETRIES + 1):
         try:
             driver.get(roulette) # 출석 사이트 이동
             time.sleep(2)
             driver.find_element('xpath', '//*[@id="attendroulette"]/button').click()
             time.sleep(2)
             break
-        except:
+        except Exception:
+            if attempt == MAX_RETRIES:
+                raise
             continue
     
-    while 1:
+    for attempt in range(MAX_RETRIES + 1):
         try:
             alert = Alert(driver)
             detail = alert.text
             alert.dismiss()
             break
-        except:
+        except Exception:
+            if attempt == MAX_RETRIES:
+                raise
+            # give the alert time to appear before the next attempt
+            time.sleep(2)
             continue
     return detail
 
@@ -275,7 +284,7 @@ async def login_filebogo(driver, id, pwd):
 
     driver.implicitly_wait(10)                                                                                                                                                                                                                                                                                                                                     
     
-    while 1:
+    for attempt in range(MAX_RETRIES + 1):
         try:
             driver.get(site) #사이트 이동
             time.sleep(5)
@@ -294,6 +303,8 @@ async def login_filebogo(driver, id, pwd):
             break
             
         except Exception as e:
+            if attempt == MAX_RETRIES:
+                raise
             continue
 
     # 로그인 버튼 클릭
@@ -307,13 +318,17 @@ async def login_filebogo(driver, id, pwd):
     
     time.sleep(3)
         
-    while 1:
+    for attempt in range(MAX_RETRIES + 1):
         try:
             alert = Alert(driver)
             detail = alert.text
             alert.dismiss()
             break
-        except:
+        except Exception:
+            if attempt == MAX_RETRIES:
+                raise
+            # give the alert time to appear before the next attempt
+            time.sleep(2)
             continue
     time.sleep(2)
     return detail
@@ -332,7 +347,7 @@ async def inven(driver, id, pwd):
     driver.implicitly_wait(5)
     driver.maximize_window() #헤드리스 안쓸때
     
-    while 1:
+    for attempt in range(MAX_RETRIES + 1):
         try:
             driver.get(url) #사이트 이동
             time.sleep(5)
@@ -346,7 +361,9 @@ async def inven(driver, id, pwd):
             time.sleep(1)
             break
             
-        except:
+        except Exception:
+            if attempt == MAX_RETRIES:
+                raise
             continue
 
     # 로그인 버튼 클릭
@@ -425,7 +442,7 @@ async def item_mania(driver, id, pwd):
     driver.get(bookmark)
     time.sleep(3)
 
-    while 1:
+    for attempt in range(MAX_RETRIES + 1):
         try:
             driver.get(login)
             time.sleep(5)
@@ -439,6 +456,8 @@ async def item_mania(driver, id, pwd):
             time.sleep(5)
             break
         except Exception as e:
+            if attempt == MAX_RETRIES:
+                raise
             time.sleep(2)
             continue
             
