@@ -407,8 +407,13 @@ async def inven(driver, id, pwd):
             pass
     
     # 결과 확인
-    info1 = driver.find_element('xpath', '/html/body/div[1]/div[4]/div[1]/div[5]/div[1]').text
-    info2 = driver.find_element('xpath', '/html/body/div[1]/div[4]/div[1]/div[5]/div[2]').text
+    try:
+        info1 = driver.find_element('css selector', '#imarbleBoard .info1').text
+        info2 = driver.find_element('css selector', '#imarbleBoard .info2').text
+    except Exception as e:
+        # attendance and dice are already done here, so an unreadable result is not a site failure
+        logger.info(f"inven result not readable: {describe_error(e)}")
+        return "결과 문구를 읽지 못함"
     logger.info(f"5 - 인벤 출석 체크 완료: {info1} / {info2}")
 
     return f'{info1} / {info2}'
@@ -436,7 +441,7 @@ async def item_mania(driver, id, pwd):
             login = driver.find_element('id', 'user_password')
             login.send_keys(pwd)
             time.sleep(1)
-            driver.find_element('xpath', '/html/body/div[2]/main/div[2]/div[2]/form[1]/ul/li[4]/button').click()
+            driver.find_element('css selector', 'form[name="g_LOGIN_FORM"] button[type="submit"]').click()
             time.sleep(5)
             break
         except Exception as e:
@@ -449,26 +454,25 @@ async def item_mania(driver, id, pwd):
     time.sleep(5)
     
     # 안내문 끄기
-    try:
-        driver.find_element('xpath', '/html/body/div[1]/div[2]/div/div[1]').click()
-    except:
-        pass
+    # the popup is optional, so do not spend the full implicit wait on it
+    driver.implicitly_wait(2)
+    for by, selector in (('css selector', '#pop_notice [alt="닫기"]'), ('xpath', '/html/body/div[1]/div[2]/div/div[1]')):
+        try:
+            driver.find_element(by, selector).click()
+            break
+        except Exception:
+            continue
+    driver.implicitly_wait(10)
     time.sleep(2)
     
     # 출석 버튼 누르기
-    dailyCheckBtn = '/html/body/div[2]/main/div/div[3]/div/div[3]'
-    driver.find_element('xpath', dailyCheckBtn).click()
+    driver.find_element('css selector', '[data-event="1"]').click()
     
     # 출석 됐는지 체크
-    time.sleep(3)
-    check = ""
-    try:
-        check = driver.find_element('xpath', dailyCheckBtn).text
-    except:
-        logger.info('아이템매니아 결과 파싱 실패 - 한번 더 시도')
-        driver.refresh()
-        time.sleep(3)
-        check = driver.find_element('xpath', dailyCheckBtn).text
+    # the site answers with alert(msg); any other command before reading it would discard the alert
+    check = expect_alert(driver)
+    if "로그인 후 이용" in check:
+        raise RuntimeError(f"로그인 안 됨: {check}")
 
     logger.info(check)
     return check
